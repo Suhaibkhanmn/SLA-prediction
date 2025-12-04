@@ -14,6 +14,10 @@ class Settings(BaseSettings):
 
     # Optional signup guard used by /auth/register
     SIGNUP_KEY: str | None = None
+    
+    # JWT signing secret (must be provided via environment for production)
+    SECRET_KEY: str = ""
+    
     vite_api_url: str | None = None
     class Config:
         env_file = ".env"

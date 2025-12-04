@@ -1,13 +1,14 @@
 from datetime import datetime, timedelta
+import os
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
+from app.config import settings
 
-# In production, load from environment (e.g. via python-dotenv / os.environ)
-SECRET_KEY = "CHANGE_ME_IN_ENV"
+SECRET_KEY = settings.SECRET_KEY or os.getenv("SECRET_KEY", "CHANGE_ME_IN_ENV")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 day
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
