@@ -18,6 +18,5 @@ README.md
 .vscode
 .idea
 *.log
-models/*.pkl
 data/test_orders.json
 
