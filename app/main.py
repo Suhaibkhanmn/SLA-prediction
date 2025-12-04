@@ -48,7 +48,10 @@ def predict(order: OrderInput):
     log_prediction(order, proba, will_miss)
 
     if will_miss:
+        print(f"[PREDICT] Order {order.order_id} triggered alert: proba={proba:.3f} >= threshold={threshold:.3f}")
         send_email_alert(order, proba)
+    else:
+        print(f"[PREDICT] Order {order.order_id} below threshold: proba={proba:.3f} < threshold={threshold:.3f}")
 
     return PredictionOutput(
         order_id=order.order_id,
