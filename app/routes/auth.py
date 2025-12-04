@@ -1,11 +1,11 @@
 from datetime import datetime
-import os
 import sqlite3
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 
 from app.auth.security import create_token, hash_password, verify_password
+from app.config import settings
 
 router = APIRouter()
 
@@ -34,7 +34,7 @@ class RegisterBody(BaseModel):
 @router.post("/auth/register")
 def register(body: RegisterBody):
   # Optional guard: if SIGNUP_KEY is set, require it to match for any registration
-  expected_key = os.getenv("SIGNUP_KEY")
+  expected_key = settings.SIGNUP_KEY
   if expected_key:
     if not body.signup_key or body.signup_key != expected_key:
       raise HTTPException(status_code=403, detail="Invalid signup key")
