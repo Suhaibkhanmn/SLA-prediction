@@ -109,16 +109,133 @@ carrier: {order.carrier}
 
     context = ssl.create_default_context()
 
+    print(f"[EMAIL] Attempting to send email for order {order.order_id}")
+    print(f"[EMAIL] From: {email_from}, To: {recipients}")
+    print(f"[EMAIL] SMTP: {settings.SMTP_HOST}:{settings.SMTP_PORT}")
+    
     try:
+        print(f"[EMAIL] Connecting to SMTP server...")
+        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as server:
+            print(f"[EMAIL] Starting TLS...")
+            server.starttls(context=context)
+            print(f"[EMAIL] Logging in as {settings.SMTP_USERNAME}...")
+            server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+            print(f"[EMAIL] Sending email to {recipients}...")
+            server.sendmail(email_from, recipients, msg.as_string())
+            print(f"[EMAIL] Email sent successfully!")
+
+        print(f"[ALERT] Email sent for order {order.order_id} (risk={probability:.2f}) to {recipients}")
+
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"[ERROR] SMTP Authentication failed for order {order.order_id}: {e}")
+        print(f"[ERROR] Check that SMTP_USERNAME and SMTP_PASSWORD are correct")
+        print(f"[ERROR] For Gmail, make sure you're using an App Password, not your regular password")
+    except smtplib.SMTPException as e:
+        print(f"[ERROR] SMTP error for order {order.order_id}: {e}")
+        print(f"[ERROR] SMTP error code: {e.smtp_code if hasattr(e, 'smtp_code') else 'N/A'}")
+        print(f"[ERROR] SMTP error message: {e.smtp_error if hasattr(e, 'smtp_error') else str(e)}")
+    except Exception as e:
+        # IMPORTANT: Do NOT crash the API
+        # Alert is already logged, so UI will still show it
+        print(f"[ERROR] Failed to send email for order {order.order_id}: {type(e).__name__}: {e}")
+        import traceback
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")
+    finally:
+        print(f"[INFO] Alert was logged to DB, so it will appear in UI despite email failure")
+
+
+def test_email_config() -> dict:
+    """
+    Test SMTP configuration by attempting to send a test email.
+    Returns a dict with success status and detailed error messages.
+    """
+    result = {
+        "success": False,
+        "message": "",
+        "errors": [],
+        "config_check": {}
+    }
+    
+    # Check configuration
+    ui_settings = load_settings()
+    enabled = ui_settings.get("enabled", True)
+    emails = ui_settings.get("emails") or []
+    recipients = [e.strip() for e in emails if isinstance(e, str) and e.strip()]
+    
+    result["config_check"] = {
+        "enabled": enabled,
+        "recipients": recipients,
+        "EMAIL_FROM": bool(settings.EMAIL_FROM),
+        "SMTP_USERNAME": bool(settings.SMTP_USERNAME),
+        "SMTP_PASSWORD": bool(settings.SMTP_PASSWORD),
+        "SMTP_HOST": settings.SMTP_HOST,
+        "SMTP_PORT": settings.SMTP_PORT,
+    }
+    
+    if not enabled:
+        result["message"] = "Email alerts are disabled in settings"
+        result["errors"].append("Email alerts disabled")
+        return result
+    
+    missing = []
+    if not settings.EMAIL_FROM:
+        missing.append("EMAIL_FROM")
+    if not settings.SMTP_USERNAME:
+        missing.append("SMTP_USERNAME")
+    if not settings.SMTP_PASSWORD:
+        missing.append("SMTP_PASSWORD")
+    if not recipients:
+        missing.append("recipients")
+    
+    if missing:
+        result["message"] = f"Missing configuration: {', '.join(missing)}"
+        result["errors"] = missing
+        return result
+    
+    # Try to send test email
+    subject = "[SLA Alert Test] Configuration Test"
+    body = """This is a test email from your SLA Prediction System.
+
+If you received this email, your SMTP configuration is working correctly!
+
+Configuration details:
+- SMTP Host: """ + settings.SMTP_HOST + """
+- SMTP Port: """ + str(settings.SMTP_PORT) + """
+- From: """ + settings.EMAIL_FROM + """
+- To: """ + ", ".join(recipients) + """
+"""
+    
+    email_from = settings.EMAIL_FROM
+    msg = MIMEMultipart()
+    msg["From"] = email_from
+    msg["To"] = ", ".join(recipients)
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body, "plain"))
+    
+    context = ssl.create_default_context()
+    
+    try:
+        print(f"[TEST] Testing email configuration...")
         with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as server:
             server.starttls(context=context)
             server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
             server.sendmail(email_from, recipients, msg.as_string())
-
-        print(f"[ALERT] Email sent for order {order.order_id} (risk={probability:.2f})")
-
+        
+        result["success"] = True
+        result["message"] = f"Test email sent successfully to {recipients}"
+        print(f"[TEST] Test email sent successfully!")
+        
+    except smtplib.SMTPAuthenticationError as e:
+        result["message"] = f"SMTP Authentication failed: {e}"
+        result["errors"].append(f"Authentication error: {e}")
+        print(f"[TEST] Authentication failed: {e}")
+    except smtplib.SMTPException as e:
+        result["message"] = f"SMTP error: {e}"
+        result["errors"].append(f"SMTP error: {e}")
+        print(f"[TEST] SMTP error: {e}")
     except Exception as e:
-        # IMPORTANT: Do NOT crash the API
-        # Alert is already logged, so UI will still show it
-        print(f"[ERROR] Failed to send email for order {order.order_id}: {e}")
-        print(f"[INFO] Alert was logged to DB, so it will appear in UI despite email failure")
+        result["message"] = f"Failed to send test email: {type(e).__name__}: {e}"
+        result["errors"].append(str(e))
+        print(f"[TEST] Error: {e}")
+    
+    return result

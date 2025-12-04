@@ -109,6 +109,16 @@ def api_update_settings(payload: SettingsSchema) -> SettingsSchema:
     return SettingsSchema(**load_settings())
 
 
+@app.post("/settings/test-email", dependencies=[Depends(require_role("admin"))])
+def test_email():
+    """
+    Test email configuration by sending a test email.
+    Useful for debugging SMTP issues.
+    """
+    from app.alert_engine import test_email_config
+    return test_email_config()
+
+
 # ------------------------------
 # ALERTS / METRICS / HEALTH / AUTH ENDPOINTS
 # ------------------------------
