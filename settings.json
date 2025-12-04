@@ -1,0 +1,7 @@
+{
+  "risk_threshold": 0.8,
+  "email_alerts_enabled": true,
+  "email_recipients": [
+    "ops@company.com"
+  ]
+}
