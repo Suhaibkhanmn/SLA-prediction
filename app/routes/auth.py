@@ -79,6 +79,6 @@ def login(body: LoginBody):
     }
   )
 
-  return {"access_token": token, "role": user["role"]}
+  return {"access_token": token, "role": user["role"], "email": user["email"]}
 
 
