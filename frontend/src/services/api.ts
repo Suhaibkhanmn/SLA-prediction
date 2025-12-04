@@ -10,7 +10,7 @@ import {
   CarrierPerformance,
 } from "../types";
 
-const API_URL = (import.meta as any).env?.VITE_API_URL || "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 function authHeaders(extra?: HeadersInit): HeadersInit {
   const stored = localStorage.getItem("sla_auth");

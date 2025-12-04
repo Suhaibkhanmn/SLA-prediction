@@ -1,6 +1,4 @@
-import { AuthState } from "../types"; // if you want types later, but we'll just use plain values for now
-
-const API_URL = (import.meta as any).env?.VITE_API_URL || "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export async function loginRequest(email: string, password: string) {
   const res = await fetch(`${API_URL}/auth/login`, {
